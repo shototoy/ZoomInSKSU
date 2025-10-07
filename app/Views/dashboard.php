@@ -25,7 +25,7 @@
             object-fit: cover;
         }
         .avatar-placeholder {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #c4eabcff 0%, #9cc3aaff 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -124,7 +124,7 @@
         }
         .post-button {
             padding: 10px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #c4eabcff 0%, #9cc3aaff 100%);
             color: white;
             border: none;
             border-radius: 8px;
@@ -162,16 +162,16 @@
 }
 
 .modal .carousel-container {
-    max-height: 70vh;
-    background: #000;
+    background: transparent;
+    max-height: 40vh;
 }
 
 .modal .carousel-images img {
     width: 100%;
-    height: 70vh;
-    max-height: 800px;
+    height: auto;
+    max-height: 40vh;
     flex-shrink: 0;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .carousel-btn {
@@ -412,18 +412,18 @@
                                 <?php endif; ?>
                                 
                                 <?php if (isset($a->images) && count($a->images) > 0): ?>
-                                    <div class="carousel-container" onclick="event.stopPropagation()">
+                                    <div class="carousel-container">
                                         <div class="carousel-images" data-carousel="<?= $a->id ?>">
                                             <?php foreach ($a->images as $img): ?>
                                                 <img src="<?= $img ?>" alt="Post image">
                                             <?php endforeach; ?>
                                         </div>
                                         <?php if (count($a->images) > 1): ?>
-                                            <button class="carousel-btn prev" onclick="moveCarousel(<?= $a->id ?>, -1)">❮</button>
-                                            <button class="carousel-btn next" onclick="moveCarousel(<?= $a->id ?>, 1)">❯</button>
+                                            <button class="carousel-btn prev" onclick="event.stopPropagation(); moveCarousel(<?= $a->id ?>, -1)">❮</button>
+                                            <button class="carousel-btn next" onclick="event.stopPropagation(); moveCarousel(<?= $a->id ?>, 1)">❯</button>
                                             <div class="carousel-indicators">
                                                 <?php for ($i = 0; $i < count($a->images); $i++): ?>
-                                                    <span class="carousel-indicator <?= $i === 0 ? 'active' : '' ?>" onclick="goToSlide(<?= $a->id ?>, <?= $i ?>)"></span>
+                                                    <span class="carousel-indicator <?= $i === 0 ? 'active' : '' ?>" onclick="event.stopPropagation(); goToSlide(<?= $a->id ?>, <?= $i ?>)"></span>
                                                 <?php endfor; ?>
                                             </div>
                                         <?php endif; ?>
@@ -544,18 +544,18 @@
                             <?php endif; ?>
                             
                             <?php if (isset($a->images) && count($a->images) > 0): ?>
-                                <div class="carousel-container" onclick="event.stopPropagation()">
+                                <div class="carousel-container">
                                     <div class="carousel-images" data-carousel="<?= $a->id ?>">
                                         <?php foreach ($a->images as $img): ?>
                                             <img src="<?= $img ?>" alt="Post image">
                                         <?php endforeach; ?>
                                     </div>
                                     <?php if (count($a->images) > 1): ?>
-                                        <button class="carousel-btn prev" onclick="moveCarousel(<?= $a->id ?>, -1)">❮</button>
-                                        <button class="carousel-btn next" onclick="moveCarousel(<?= $a->id ?>, 1)">❯</button>
+                                        <button class="carousel-btn prev" onclick="event.stopPropagation(); moveCarousel(<?= $a->id ?>, -1)">❮</button>
+                                        <button class="carousel-btn next" onclick="event.stopPropagation(); moveCarousel(<?= $a->id ?>, 1)">❯</button>
                                         <div class="carousel-indicators">
                                             <?php for ($i = 0; $i < count($a->images); $i++): ?>
-                                                <span class="carousel-indicator <?= $i === 0 ? 'active' : '' ?>" onclick="goToSlide(<?= $a->id ?>, <?= $i ?>)"></span>
+                                                <span class="carousel-indicator <?= $i === 0 ? 'active' : '' ?>" onclick="event.stopPropagation(); goToSlide(<?= $a->id ?>, <?= $i ?>)"></span>
                                             <?php endfor; ?>
                                         </div>
                                     <?php endif; ?>
