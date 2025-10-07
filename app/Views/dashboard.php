@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>News Feed - Announcement System</title>
+    <title>ZoomInSKSU System</title>
     <link rel="stylesheet" href="/css/shared.css">
     <style>
         .status-update-box {
@@ -275,7 +275,7 @@
 </head>
 <body>
     <header>
-        <h1>News Feed</h1>
+        <h1>ZoomInSKSU</h1>
         <div class="user-info">
             <span><?= esc(session()->get('profile_name')) ?> (<?= esc(session()->get('role')) ?>)</span>
             <a href="/logout">Logout</a>
@@ -700,7 +700,7 @@
     </div>
     
     <footer>
-        <p>&copy; 2025 News Feed System</p>
+        <p>&copy; 2025 ZoomInSKSU System, By Esteban and Esteva</p>
     </footer>
 
     <script>
