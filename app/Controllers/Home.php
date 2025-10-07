@@ -20,13 +20,15 @@ class Home extends BaseController
         $data = [];
         
         $data['announcements'] = $this->db->query(
-            "SELECT a.*, u.username FROM announcements a 
+            "SELECT a.*, u.username, u.profile_name FROM announcements a 
              JOIN users u ON a.user_id = u.id 
              ORDER BY a.created_at DESC"
         )->getResult();
 
         foreach ($data['announcements'] as $announcement) {
-            $announcement->image_url = $this->getAnnouncementImage($announcement->id);
+            $announcement->images = $this->getAnnouncementImages($announcement->id);
+            $announcement->reaction_count = $this->getReactionCount($announcement->id);
+            $announcement->user_reacted = $this->hasUserReacted($announcement->id, session()->get('user_id'));
         }
 
         if (session()->get('role') === 'admin') {
@@ -51,10 +53,11 @@ class Home extends BaseController
                          ->get()
                          ->getRow();
         
-        if ($user && in_array($user->role, ['admin', 'student', 'student'])) {
+        if ($user && in_array($user->role, ['admin', 'student'])) {
             session()->set([
                 'user_id' => $user->id,
                 'username' => $user->username,
+                'profile_name' => $user->profile_name,
                 'role' => $user->role
             ]);
             
@@ -82,17 +85,28 @@ class Home extends BaseController
             $this->db->table('announcements')->insert($data);
             $announcementId = $this->db->insertID();
             
-            $image = $this->request->getFile('image');
-            if ($image && $image->isValid() && !$image->hasMoved()) {
-                $assetsPath = FCPATH . 'assets/';
-                if (!is_dir($assetsPath)) {
-                    mkdir($assetsPath, 0755, true);
+            $images = $this->request->getFileMultiple('images');
+            if ($images) {
+                $order = 0;
+                foreach ($images as $image) {
+                    if ($image->isValid() && !$image->hasMoved()) {
+                        $assetsPath = FCPATH . 'assets/announcements/';
+                        if (!is_dir($assetsPath)) {
+                            mkdir($assetsPath, 0755, true);
+                        }
+                        
+                        $extension = $image->getExtension();
+                        $newName = $announcementId . '_' . uniqid() . '.' . $extension;
+                        
+                        $image->move($assetsPath, $newName, true);
+                        
+                        $this->db->table('announcement_images')->insert([
+                            'announcement_id' => $announcementId,
+                            'image_path' => $newName,
+                            'display_order' => $order++
+                        ]);
+                    }
                 }
-                
-                $extension = $image->getExtension();
-                $newName = $announcementId . '.' . $extension;
-                
-                $image->move($assetsPath, $newName, true);
             }
         }
         return redirect()->to('/');
@@ -102,12 +116,13 @@ class Home extends BaseController
     {
         if (session()->get('role') === 'admin') {
             $role = $this->request->getPost('role');
-            if (!in_array($role, ['admin', 'student', 'student'])) {
+            if (!in_array($role, ['admin', 'student'])) {
                 $role = 'student';
             }
             
             $this->db->table('users')->insert([
                 'username' => $this->request->getPost('username'),
+                'profile_name' => $this->request->getPost('profile_name'),
                 'password' => $this->request->getPost('password'),
                 'role' => $role
             ]);
@@ -124,27 +139,31 @@ class Home extends BaseController
         $data['view_mode'] = 'modal';
         
         $data['announcements'] = $this->db->query(
-            "SELECT a.*, u.username FROM announcements a 
+            "SELECT a.*, u.username, u.profile_name FROM announcements a 
              JOIN users u ON a.user_id = u.id 
              ORDER BY a.created_at DESC"
         )->getResult();
 
         foreach ($data['announcements'] as $announcement) {
-            $announcement->image_url = $this->getAnnouncementImage($announcement->id);
+            $announcement->images = $this->getAnnouncementImages($announcement->id);
+            $announcement->reaction_count = $this->getReactionCount($announcement->id);
+            $announcement->user_reacted = $this->hasUserReacted($announcement->id, session()->get('user_id'));
         }
 
         $data['announcement'] = $this->db->query(
-            "SELECT a.*, u.username FROM announcements a 
+            "SELECT a.*, u.username, u.profile_name FROM announcements a 
              JOIN users u ON a.user_id = u.id 
              WHERE a.id = ?", [$id]
         )->getRow();
 
         if ($data['announcement']) {
-            $data['announcement']->image_url = $this->getAnnouncementImage($data['announcement']->id);
+            $data['announcement']->images = $this->getAnnouncementImages($data['announcement']->id);
+            $data['announcement']->reaction_count = $this->getReactionCount($data['announcement']->id);
+            $data['announcement']->user_reacted = $this->hasUserReacted($data['announcement']->id, session()->get('user_id'));
         }
 
         $data['comments'] = $this->db->query(
-            "SELECT c.*, u.username FROM comments c 
+            "SELECT c.*, u.username, u.profile_name FROM comments c 
              JOIN users u ON c.user_id = u.id 
              WHERE c.announcement_id = ? 
              ORDER BY c.created_at ASC", [$id]
@@ -169,6 +188,36 @@ class Home extends BaseController
                 'parent_id' => $parentId,
                 'comment' => $this->request->getPost('comment')
             ]);
+
+            return redirect()->to('/view/' . $announcementId);
+        }
+        return redirect()->to('/');
+    }
+
+    public function toggleReaction()
+    {
+        if (session()->get('user_id')) {
+            $announcementId = $this->request->getPost('announcement_id');
+            $userId = session()->get('user_id');
+
+            $existing = $this->db->table('reactions')
+                ->where('announcement_id', $announcementId)
+                ->where('user_id', $userId)
+                ->get()
+                ->getRow();
+
+            if ($existing) {
+                $this->db->table('reactions')
+                    ->where('announcement_id', $announcementId)
+                    ->where('user_id', $userId)
+                    ->delete();
+            } else {
+                $this->db->table('reactions')->insert([
+                    'announcement_id' => $announcementId,
+                    'user_id' => $userId,
+                    'reaction_type' => 'like'
+                ]);
+            }
 
             return redirect()->to('/view/' . $announcementId);
         }
@@ -204,18 +253,37 @@ class Home extends BaseController
         return redirect()->to('/');
     }
 
-    private function getAnnouncementImage($announcementId)
+    private function getAnnouncementImages($announcementId)
     {
-        $assetsPath = FCPATH . 'assets/';
-        $extensions = ['jpg', 'jpeg', 'png'];
+        $images = $this->db->table('announcement_images')
+            ->where('announcement_id', $announcementId)
+            ->orderBy('display_order', 'ASC')
+            ->get()
+            ->getResult();
         
-        foreach ($extensions as $ext) {
-            $filePath = $assetsPath . $announcementId . '.' . $ext;
-            if (file_exists($filePath)) {
-                return base_url('assets/' . $announcementId . '.' . $ext);
-            }
+        $imageUrls = [];
+        foreach ($images as $img) {
+            $imageUrls[] = base_url('assets/announcements/' . $img->image_path);
         }
         
-        return null;
+        return $imageUrls;
+    }
+
+    private function getReactionCount($announcementId)
+    {
+        return $this->db->table('reactions')
+            ->where('announcement_id', $announcementId)
+            ->countAllResults();
+    }
+
+    private function hasUserReacted($announcementId, $userId)
+    {
+        $result = $this->db->table('reactions')
+            ->where('announcement_id', $announcementId)
+            ->where('user_id', $userId)
+            ->get()
+            ->getRow();
+        
+        return $result !== null;
     }
 }
